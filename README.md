@@ -3,134 +3,155 @@
     <img alt="Medusa" src="https://user-images.githubusercontent.com/7554214/153162406-bf8fd16f-aa98-4604-b87b-e13ab4baf604.png" width="100" />
   </a>
 </p>
-<h1 align="center">
-  Medusa
-</h1>
 
-<h4 align="center">
-  <a href="https://github.com/medusajs/admin">Medusa Admin</a> |
-  <a href="https://www.medusajs.com">Website</a> |
-  <a href="https://www.medusajs.com/blog">Blog</a> |
-  <a href="https://www.linkedin.com/company/medusa-commerce">LinkedIn</a> |
-  <a href="https://twitter.com/medusajs">Twitter</a> |
-  <a href="https://docs.medusajs.com">Documentation</a> |
-  <a href="https://medusajs.notion.site/medusajs/Medusa-Home-3485f8605d834a07949b17d1a9f7eafd">Notion</a>
-</h4>
+# Medusa Backend AWS Infrastructure setup
 
-<p align="center">
-Medusa is an open-source headless commerce engine that enables developers to create amazing digital commerce experiences.
-</p>
-<p align="center">
-  <a href="https://github.com/medusajs/medusa/blob/master/LICENSE">
-    <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="Medusa is released under the MIT license." />
-  </a>
-  <a href="https://github.com/medusajs/medusa/blob/master/CONTRIBUTING.md">
-    <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat" alt="PRs welcome!" />
-  </a>
-    <a href="https://www.producthunt.com/posts/medusa"><img src="https://img.shields.io/badge/Product%20Hunt-%231%20Product%20of%20the%20Day-%23DA552E" alt="Product Hunt"></a>
-  <a href="https://discord.gg/xpCwq3Kfn8">
-    <img src="https://img.shields.io/badge/chat-on%20discord-7289DA.svg" alt="Discord Chat" />
-  </a>
-  <a href="https://twitter.com/intent/follow?screen_name=medusajs">
-    <img src="https://img.shields.io/twitter/follow/medusajs.svg?label=Follow%20@medusajs" alt="Follow @medusajs" />
-  </a>
-</p>
+This repository contains the infrastructure as code (IaC) setup using Terraform and Docker for deploying Medusa e-commerce platform on AWS.
 
+## Architecture Overview
 
-## Please note 
-This repo is managed by the Medusa Community. Medusa does not provide official support for Docker, but we will accept fixes and documentation. Use at your own risk.
+The infrastructure setup includes:
+- ECS Fargate for container orchestration
+- Application Load Balancer (ALB) for traffic distribution
+- ElastiCache Redis for caching
+- Neon Database (external) for PostgreSQL
+- Route53 for DNS management
+- ACM for SSL/TLS certificates
+- ECR for container registry
+- VPC with public subnets across multiple AZs
 
-**This project is inteded for development only at this time.**
+## Prerequisites
 
-The files for both the <i>Medusa server</i> and the <i>Storefront</i> are loaded in Bind Mounts allowing you to change the server functionality and have the change be hot-reloaded onto your running containers.
+- AWS CLI configured with appropriate credentials
+- Terraform >= 1.0
+- Docker
+- Domain name with Route53 hosted zone and certificate
+- Database account and connection string eg. Neon DB
 
-</p>
+## Quick Start
 
----
-
-## Requirements
-
-To use Docker with Medusa, you should have created a Medusa project. Check out our [Quickstart](https://github.com/medusajs/medusa#quickstart) to get started. 
-
-Additionally, you should have `docker` and `docker-compose` installed on your system.
-
-## Getting Started
-
-To set up Medusa in a development environment with Docker, you should copy files `docker-compose.yml`, `docker-compose.override.yml, `backend/develop.sh`, and `backend/Dockerfile` to your Medusa project.
-
-Then build the images since they are not published on dockerhub. This is accomplished by adding the `--build` flag as shown below:
-
+1. Clone this repository:
 ```bash
-docker compose up --build
+git clone <repository-url>
+cd medusa-infrastructure
 ```
 
-Having already built the Docker images you can run docker compose without the `--build` flag.
-
-```
-docker compose up
-```
-
-Your local Medusa setup is now running with each of the services occupying the following ports:
-
-<ul>
-  <li><b>Medusa Server</b>: 9000
-  <li><b>Medusa Admin</b>: 7000
-  <li><b>Storefront</b>: 8000
-  <li><b>postgres</b>: 5432
-  <li><b>redis</b>: 6379
-</ul>
-
-_Note: If you change the dependencies of your projects by adding new packages you can simply rebuild that package with the same tag `test` and run `docker compose up` once again to update your environment._
-
-### Seeding your Medusa store
-
-To add seed data to your medusa store run this command in a seperate
-
-```
-docker exec medusa-server medusa seed -f ./data/seed.json
+2. Update `terraform.tfvars` with your values:
+```hcl
+aws_region         = "your-region"
+domain_name        = "your-domain.com"
+subdomain          = "manage"
+neon_db_url        = "your-neon-db-url"
+certificate_domain = "*.your-domain.com"
 ```
 
-## Running Medusa with docker in production
-
-This repository and each of the services contain dockerfiles for both development and production, named `Dockerfile` and `Dockerfile.prod` respectively. The `Dockerfile.prod` copies the local files from disk and builds a production ready image based on your local development progress. Your specific needs for a production like container might differ from the `Dockerfile.prod` but it should provide a template and an idea of the requirements for each of the basic services.
-
-To run the services in a production state `docker compose` is simply run with the `docker-compose.production.yml` file as well as the basic `docker-compose.yml` file as seen below. If you wish to build the production ready images and then start them run `docker compose up` with the `--build` flag as described above.
-
-```
-docker compose up -f docker-compose.yml -f docker-compose.production.yml up
+3. Initialize Terraform:
+```bash
+terraform init
 ```
 
-`docker-compose.production.yml` contains production relevant overrides to the services described in the `docker-compose.yml` development file.
-
-## Try it out
-
-```
-curl -X GET localhost:9000/store/products | python -m json.tool
+4. Deploy the infrastructure:
+```bash
+terraform plan
+terraform apply
 ```
 
-After the seed script has run you will have the following things in you database:
+5. Build and push Docker image:
+```bash
+# Login to ECR
+aws ecr get-login-password --region <region> | docker login --username AWS --password-stdin <aws-account-id>.dkr.ecr.<region>.amazonaws.com
 
-- a User with the email: admin@medusa-test.com and password: supersecret
-- a Region called Default Region with the countries GB, DE, DK, SE, FR, ES, IT
-- a Shipping Option called Standard Shipping which costs 10 EUR
-- a Product called Cool Test Product with 4 Product Variants that all cost 19.50 EUR
+# Build image
+docker build -t medusa-repo .
 
-Visit [docs.medusa-commerce.com](https://docs.medusa-comerce.com) for further guides.
+# Tag image
+docker tag medusa-repo:latest <aws-account-id>.dkr.ecr.<region>.amazonaws.com/medusa-repo:latest
 
-<p>
-  <a href="https://www.medusa-commerce.com">
-    Website
-  </a> 
-  |
-  <a href="https://medusajs.notion.site/medusajs/Medusa-Home-3485f8605d834a07949b17d1a9f7eafd">
-    Notion Home
-  </a>
-  |
-  <a href="https://twitter.com/intent/follow?screen_name=medusajs">
-    Twitter
-  </a>
-  |
-  <a href="https://docs.medusa-commerce.com">
-    Docs
-  </a>
-</p>
+# Create repo
+aws ecr create-repository --repository-name your-repo-name
+
+```
+# Push image
+docker push <aws-account-id>.dkr.ecr.<region>.amazonaws.com/medusa-repo:latest
+
+## Infrastructure Components
+```
+
+### Networking
+- VPC with CIDR block 10.0.0.0/16
+- Two public subnets across different AZs
+- Internet Gateway for public internet access
+- Route tables for subnet routing
+
+### Security
+- Security groups for ALB, ECS tasks, and Redis
+- IAM roles and policies for ECS tasks
+- SSL/TLS certificate management
+
+### Container Infrastructure
+- ECS Cluster with Fargate launch type
+- Auto-scaling policies based on CPU and memory utilization
+- ECR repository with lifecycle policies
+
+### Load Balancing
+- Application Load Balancer
+- HTTPS listener with SSL certificate
+- HTTP to HTTPS redirect
+- Health checks configuration
+
+### Caching
+- Redis ElastiCache cluster
+- Subnet group for Redis deployment
+- Security group for Redis access
+
+## Environment Variables
+
+The following environment variables are configured in the ECS task definition:
+- `REDIS_URL`: Auto-generated from ElastiCache, use this in .env file
+- `NODE_ENV`: Set to "production"
+- `DATABASE_URL`: Provided via terraform.tfvars
+
+## Monitoring and Logging
+
+- CloudWatch Log Groups for container logs
+- Container Insights enabled on ECS cluster
+- ALB access logs (optional)
+
+## Security Considerations
+
+- All resources are deployed within a VPC
+- Security groups limit access to required ports only
+- HTTPS enforced with HTTP to HTTPS redirect
+- IAM roles follow principle of least privilege
+- Redis access restricted to ECS tasks
+
+## Cost Optimization
+
+- Fargate Spot can be used for cost savings
+- Auto-scaling based on demand
+- ECR lifecycle policies to manage image storage
+- ElastiCache instance sized appropriately
+
+## Maintenance
+
+### Updating the Application
+1. Build new Docker image
+2. Push to ECR
+3. Update ECS service (automatic with latest tag)
+
+### Infrastructure Updates
+1. Update Terraform code
+2. Run `terraform plan` to review changes
+3. Apply changes with `terraform apply`
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a new Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
