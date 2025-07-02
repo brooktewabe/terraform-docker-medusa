@@ -13,6 +13,7 @@ This repository contains the infrastructure as code (IaC) setup using Terraform 
 The infrastructure setup includes:
 - ECS Fargate for container orchestration
 - Application Load Balancer (ALB) for traffic distribution
+- AWS Fargate instances with auto scaling
 - ElastiCache Redis for caching
 - Neon Database (external) for PostgreSQL
 - Route53 for DNS management
